@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: node-app 
-        image: pdockersavant/nodejs-app:latest 
+        image: aditya1228/project1228:latest 
         ports:
         - containerPort: 3000 
