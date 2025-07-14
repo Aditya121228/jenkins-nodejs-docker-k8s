@@ -1,0 +1,55 @@
+pipeline{
+    agent any
+     environment{
+         dockerhub=credentials('docker')
+         IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_REPO = 'project1228'
+        EKS_CLUSTER = 'my-cluster'
+        AWS_DEFAULT_REGION = 'ap-south-1'
+     }
+    stages{
+        stage(" git checkout"){
+            steps{
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'git', url: 'https://github.com/Aditya121228/jenkins-nodejs-docker-k8s.git']])
+            }
+        }
+        stage('Build Docker Image....') {
+            steps {
+                sh 'docker build -t aditya1228/${IMAGE_REPO}:${IMAGE_TAG} .'
+            }
+        }
+         stage('Publish Artifacts To Dockerhub....') {
+            steps {
+                sh 'docker image ls'
+                sh 'docker logout'
+                sh 'echo $dockerhub_PSW | docker login -u $dockerhub_USR --password-stdin docker.io'
+                sh 'docker push aditya1228/${IMAGE_REPO}:${IMAGE_TAG}'
+            }
+        }
+        stage('Update YAML') {
+            steps {
+                script {
+                    def yaml = readFile 'nodejs-app-deploy.yml'
+                    yaml = yaml.replace('latest', "${IMAGE_TAG}")
+                    writeFile file: 'nodejs-app-deploy.yml', text: yaml
+                }
+            }
+        }
+        stage('Deploying App to Kubernetes') {
+                 steps {
+                     script{
+                         
+                      withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: '276042748566']]) {
+                      sh """
+                      
+                          aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_DEFAULT_REGION}
+                          cat nodejs-app-deploy.yml
+                          kubectl apply -f nodejs-app-deploy.yml
+                          kubectl get svc
+                      """
+            }
+                     }    
+        }
+    }
+    }
+}
