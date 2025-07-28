@@ -1,5 +1,5 @@
 pipeline {
-
+ 
   environment {
     dockerimagename = "pdockersavant/ethansdemo"
     dockerImage = ""
